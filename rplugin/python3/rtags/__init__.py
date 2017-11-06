@@ -1,19 +1,13 @@
 import neovim
 import json
 from subprocess import Popen, PIPE
-
-
-def on_error(err):
-    with open('/tmp/pylog', 'w') as log:
-        log.write(str(err))
-    raise err
+from rtags.util import log, error, on_error
 
 
 @neovim.plugin
 class Main(object):
     def __init__(self, vim):
         self.vim = vim
-
 
     @neovim.function('_rtags_reindex_unsaved')
     def reindex_unsaved(self, args):
@@ -26,9 +20,9 @@ class Main(object):
         p = Popen(command.split(" "), stdout=PIPE, stdin=PIPE, stderr=PIPE)
         stdout_data, stderr_data = p.communicate(input=text.encode("utf-8"))
 
-
     @neovim.function('_rtags_neomake_get_list_entries', sync=True)
     def get_list_entries(self, args):
+        log("[GET_LIST_ENTRIES]")
         try:
             if(len(args) < 1):
                 return []
@@ -46,7 +40,7 @@ class Main(object):
 
             if(stdout_data == ""):
                 return []
-            errors_json = json.loads(stdout_data)            
+            errors_json = json.loads(stdout_data)
 
             if('checkStyle' not in errors_json):
                 return []
@@ -66,6 +60,8 @@ class Main(object):
                     'type': 'E' if e['type'] == 'error' else 'W',
                     'text': e['message']
                 })
+
+            log("[GET_LIST_ENTRIES FINISHED]")
             return errors
 
         except Exception as err:

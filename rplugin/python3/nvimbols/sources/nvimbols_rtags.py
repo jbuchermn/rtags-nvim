@@ -1,7 +1,7 @@
 import json
 from subprocess import Popen, PIPE
 
-from nvimbols.util import log
+from rtags.util import log
 from nvimbols.source.base import Base
 from nvimbols.symbol import Symbol, SymbolLocation
 from rtags.nvimbols.rtags_symbol import RTagsSymbol
@@ -74,7 +74,7 @@ class Source(Base):
     def supported_filetypes(self):
         return ['c', 'cpp']
 
-    def find_references(self, symbol):
+    def _find_references(self, symbol):
 
         def try_find_ref(symbol):
             referenced_location = rc_get_referenced_symbol_location(symbol._location)
@@ -104,7 +104,7 @@ class Source(Base):
 
         return refs
 
-    def find_referenced_by(self, symbol):
+    def _find_referenced_by(self, symbol):
         referenced_by_locations = rc_get_referenced_by_symbol_locations(symbol._location)
         if(referenced_by_locations is None):
             return []
@@ -127,11 +127,8 @@ class Source(Base):
 
         symbol = RTagsSymbol(symbol)
 
-        log('Getting references...')
-        symbol._references = self.find_references(symbol)
-        log('Getting referenced_by...')
-        symbol._referenced_by = self.find_referenced_by(symbol)
-        log('done')
+        symbol._references = self._find_references(symbol)
+        symbol._referenced_by = self._find_referenced_by(symbol)
 
         return symbol
 

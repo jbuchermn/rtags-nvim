@@ -1,6 +1,5 @@
 import re
 import json
-from pprint import pprint
 from subprocess import Popen, PIPE
 
 from deoplete.source.base import Base
@@ -14,7 +13,7 @@ class Source(Base):
         self.name = 'rtags'
         self.mark = '[rtags]'
         self.filetypes = ['c', 'cpp', 'objc', 'objcpp']
-        self.rank = 500
+        self.rank = 1000
         self.is_bytepos = True
         self.min_pattern_length = 1
         self.input_pattern = (r'[^. \t0-9]\.\w*|'

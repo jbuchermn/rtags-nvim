@@ -15,4 +15,4 @@ class RTagsSymbol(Symbol):
 
         location = SymbolLocation(filename, start_line, start_col, start_line, start_col + length)
 
-        Symbol.__init__(self, symbol['symbolName'], symbol['kind'], symbol['type'], location)
+        Symbol.__init__(self, symbol['symbolName'], symbol['kind'], symbol['type'] if 'type' in symbol else '', location)

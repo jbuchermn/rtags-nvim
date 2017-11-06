@@ -88,6 +88,7 @@ endfunction
 function! rtags#enable_automake()
     call rtags#stop_automake_timer()
     if(g:rtags_enable_automake && (&ft==# 'cpp'|| &ft==# 'c'))
+        call neomake#configure#automake('rw', 0)
         call rtags#start_automake_timer()
     endif
 endfunction
