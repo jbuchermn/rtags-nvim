@@ -1,71 +1,44 @@
 import neovim
-import json
-from subprocess import Popen, PIPE
-from rtags.util import log, error, on_error
+from rtags.util import log, on_error
+from rtags.neomake.neomake_rtags import NeomakeRTags
+from rtags.rc import rc_reindex
 
 
 @neovim.plugin
 class Main(object):
     def __init__(self, vim):
-        self.vim = vim
+        self._vim = vim
+        self._neomake_rtags = NeomakeRTags(vim)
 
     @neovim.function('_rtags_reindex_unsaved')
     def reindex_unsaved(self, args):
-        buf = self.vim.current.buffer
-        filename = buf.name
-        text = "\n".join(buf)
+        try:
+            buf = self._vim.current.buffer
+            filename = buf.name
+            text = "\n".join(buf)
 
-        command = "rc --absolute-path --reindex %s --unsaved-file=%s:%i" % (filename, filename, len(text))
-
-        p = Popen(command.split(" "), stdout=PIPE, stdin=PIPE, stderr=PIPE)
-        stdout_data, stderr_data = p.communicate(input=text.encode("utf-8"))
+            rc_reindex(filename, text)
+        except Exception as err:
+            on_error(self._vim, err)
 
     @neovim.function('_rtags_neomake_get_list_entries', sync=True)
-    def get_list_entries(self, args):
+    def neomake_get_list_entries(self, args):
         log("[GET_LIST_ENTRIES]")
+
         try:
             if(len(args) < 1):
                 return []
+
             jobinfo = args[0]
+            filename = self._vim.current.buffer.name
 
-            buf = self.vim.current.buffer
-            filename = buf.name
-
-            command = "rc --json --absolute-path --synchronous-diagnostics --diagnose %s" % filename
-
-            p = Popen(command.split(" "), stdout=PIPE, stderr=PIPE)
-            stdout_data, stderr_data = p.communicate()
-
-            stdout_data = stdout_data.decode("utf-8")
-
-            if(stdout_data == ""):
-                return []
-            errors_json = json.loads(stdout_data)
-
-            if('checkStyle' not in errors_json):
-                return []
-            errors_json = errors_json['checkStyle']
-
-            if(filename not in errors_json):
-                return []
-            errors_json = errors_json[filename]
-
-            errors = []
-            for e in errors_json:
-                errors.append({
-                    'filename': filename,
-                    'lnum': e['line'],
-                    'col': e['column'],
-                    'length': e['length'] if 'length' in e else None,
-                    'type': 'E' if e['type'] == 'error' else 'W',
-                    'text': e['message']
-                })
+            list_entries = self._neomake_rtags.get_list_entries(filename)
 
             log("[GET_LIST_ENTRIES FINISHED]")
-            return errors
+            return list_entries
 
         except Exception as err:
-            on_error(err)
+            on_error(self._vim, err)
 
 
 

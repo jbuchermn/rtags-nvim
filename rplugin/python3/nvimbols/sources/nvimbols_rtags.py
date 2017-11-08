@@ -1,72 +1,9 @@
-import json
-from subprocess import Popen, PIPE
-
 from rtags.util import log
 from nvimbols.source.base import Base
 from nvimbols.symbol import Symbol, SymbolLocation
 from rtags.nvimbols.rtags_symbol import RTagsSymbol
+from rtags.rc import rc_get_referenced_symbol_location, rc_get_symbol_info, rc_get_referenced_by_symbol_locations
 
-
-def rc_get_symbol_info(location):
-    command = "rc --absolute-path --json --symbol-info %s:%i:%i" % (location._filename, location._start_line, location._start_col)
-
-    p = Popen(command.split(" "), stdout=PIPE, stdin=PIPE, stderr=PIPE)
-    stdout_data, stderr_data = p.communicate()
-    stdout_data = stdout_data.decode("utf-8")
-    if(stdout_data == ""):
-        return None
-
-    try:
-        return json.loads(stdout_data)
-    except Exception:
-        return None
-
-
-def rc_get_referenced_symbol_location(location):
-    command = "rc --absolute-path --follow-location %s:%i:%i" % (location._filename, location._start_line, location._start_col)
-
-    p = Popen(command.split(" "), stdout=PIPE, stdin=PIPE, stderr=PIPE)
-    stdout_data, stderr_data = p.communicate()
-    stdout_data = stdout_data.decode("utf-8")
-    if(stdout_data == ""):
-        return None
-
-    location = stdout_data.split(' ')[0]
-    tmp = location.split(':')
-    filename = tmp[0]
-    line = int(tmp[1])
-    col = int(tmp[2])
-
-    return SymbolLocation(filename, line, col)
-
-
-def rc_get_referenced_by_symbol_locations(location):
-    command = "rc --absolute-path --max 100 --references %s:%i:%i" % (location._filename, location._start_line, location._start_col)
-
-    p = Popen(command.split(" "), stdout=PIPE, stdin=PIPE, stderr=PIPE)
-    stdout_data, stderr_data = p.communicate()
-    stdout_data = stdout_data.decode("utf-8")
-    if(stdout_data == ""):
-        return None
-
-    result = []
-    for line in stdout_data.splitlines():
-        if line.strip() == "":
-                continue
-
-        location = line.split(' ')[0]
-        tmp = location.split(':')
-        filename = tmp[0]
-        line = int(tmp[1])
-        col = int(tmp[2])
-
-        result += [SymbolLocation(filename, line, col)]
-
-    if(len(result) == 100):
-        del result[99]
-        # TODO: Add some ... in output
-
-    return result
 
 
 class Source(Base):
@@ -79,7 +16,7 @@ class Source(Base):
         def try_find_ref(symbol):
             referenced_location = rc_get_referenced_symbol_location(symbol._location)
             if(referenced_location is not None):
-                symbol = rc_get_symbol_info(referenced_location)
+                symbol = rc_get_symbol_info(SymbolLocation(*referenced_location))
                 return RTagsSymbol(symbol) if symbol is not None else None
             else:
                 return None
@@ -106,16 +43,17 @@ class Source(Base):
         return refs
 
     def _find_referenced_by(self, symbol):
-        referenced_by_locations = rc_get_referenced_by_symbol_locations(symbol._location)
+        # TODO! Do sth useful with incomplete
+        referenced_by_locations, incomplete = rc_get_referenced_by_symbol_locations(symbol._location)
         if(referenced_by_locations is None):
             return []
 
         result = []
         for location in referenced_by_locations:
-            symbol = rc_get_symbol_info(location)
-            if symbol == None:
+            referenced_by_symbol = rc_get_symbol_info(SymbolLocation(*location))
+            if referenced_by_symbol is None:
                 continue
-            referenced_by_symbol = RTagsSymbol(symbol)
+            referenced_by_symbol = RTagsSymbol(referenced_by_symbol)
 
             if referenced_by_symbol._location == symbol._location:
                 continue

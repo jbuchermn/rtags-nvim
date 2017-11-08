@@ -1,7 +1,6 @@
 import re
-import json
-from subprocess import Popen, PIPE
 
+from rtags.rc import rc_get_autocompletions
 from deoplete.source.base import Base
 
 current = __file__
@@ -28,18 +27,13 @@ class Source(Base):
         line = context['position'][1]
         col = (context['complete_position'] + 1)
         buf = self.vim.current.buffer
-        buf_name = buf.name
-        buf = buf[0:line]
-        buf[-1] = buf[-1][0:col]
+        filename = buf.name
         text = "\n".join(buf)
 
-        command = self.get_rc_command(buf_name, line, col, len(text))
-        p = Popen(command, stdout=PIPE, stdin=PIPE, stderr=PIPE)
-        stdout_data, stderr_data = p.communicate(input=text.encode("utf-8"))
-
-        if stdout_data.decode("utf-8") == "":
+        completions_json = rc_get_autocompletions(filename, line, col, text)
+        if(completions_json is None or 'completions' not in completions_json):
             return []
-        completions_json = json.loads(stdout_data.decode("utf-8"))
+
         completions = []
         for raw_completion in completions_json['completions']:
             completion = {'dup': 1}
@@ -79,15 +73,3 @@ class Source(Base):
 
         return completions
 
-    def get_rc_command(self, file_name, line, column, offset):
-        # TODO change string to table
-        command = "rc --absolute-path --synchronous-completions"
-        command += " --json"
-        command += " -l {filename}:{line}:{column}"
-        command += " --unsaved-file={filename}:{offset}"
-        formated_command = command.format(filename=file_name,
-                                          line=line,
-                                          column=column,
-                                          offset=offset)
-
-        return formated_command.split(" ")
