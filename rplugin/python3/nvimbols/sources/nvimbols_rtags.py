@@ -79,7 +79,8 @@ class Source(Base):
         def try_find_ref(symbol):
             referenced_location = rc_get_referenced_symbol_location(symbol._location)
             if(referenced_location is not None):
-                return RTagsSymbol(rc_get_symbol_info(referenced_location))
+                symbol = rc_get_symbol_info(referenced_location)
+                return RTagsSymbol(symbol) if symbol is not None else None
             else:
                 return None
 
@@ -111,7 +112,11 @@ class Source(Base):
 
         result = []
         for location in referenced_by_locations:
-            referenced_by_symbol = RTagsSymbol(rc_get_symbol_info(location))
+            symbol = rc_get_symbol_info(location)
+            if symbol == None:
+                continue
+            referenced_by_symbol = RTagsSymbol(symbol)
+
             if referenced_by_symbol._location == symbol._location:
                 continue
 
