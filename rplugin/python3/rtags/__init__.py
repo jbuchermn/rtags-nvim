@@ -1,7 +1,9 @@
 import neovim
+import os
 from rtags.util import log, on_error
 from rtags.neomake.neomake_rtags import NeomakeRTags
 from rtags.rc import rc_reindex
+from rtags.rc_j import RcJ
 
 
 @neovim.plugin
@@ -18,6 +20,14 @@ class Main(object):
             text = "\n".join(buf)
 
             rc_reindex(filename, text)
+        except Exception as err:
+            on_error(self._vim, err)
+
+    @neovim.function('_rtags_J', sync=True)
+    def rtags_J(self, args):
+        try:
+            rcj = RcJ(self._vim)
+            rcj.start()
         except Exception as err:
             on_error(self._vim, err)
 

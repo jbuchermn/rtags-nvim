@@ -37,7 +37,7 @@ endif
 
 
 function! rtags#enable_autoreindex()
-    if(g:rtags_enable_autoreindex && (&ft==# 'cpp' || &ft==# 'c'))
+    if(g:rtags_enable_autoreindex && (&ft==# 'cpp' || &ft==# 'c' || &ft==# 'objc' || &ft==# 'objcpp'))
         augroup rtags_nvim_autoreindex_group
             autocmd!
             autocmd InsertLeave * :call rtags#reindex()
@@ -60,3 +60,12 @@ augroup rtags_nvim_root_group
     autocmd!
     autocmd Filetype * :call rtags#enable_autoreindex()
 augroup end
+
+"
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" Index a project by :RTagsJ
+"
+
+command! RTagsJ :call rtags#rtags_J()
+
+

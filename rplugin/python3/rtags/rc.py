@@ -2,6 +2,20 @@ import json
 from subprocess import Popen, PIPE
 
 
+def rc_current_project():
+    command = "rc --current-project"
+
+    p = Popen(command.split(" "), stdout=PIPE, stderr=PIPE)
+    stdout_data, stderr_data = p.communicate()
+    return stdout_data.decode("utf-8").strip()
+
+def rc_j(directory):
+    command = "rc -J"
+
+    p = Popen(command.split(" "), stdout=PIPE, stderr=PIPE, cwd=directory)
+    stdout_data, stderr_data = p.communicate()
+    return stdout_data.decode("utf-8").strip()
+
 def rc_reindex(filename, text):
     command = "rc --absolute-path --reindex %s --unsaved-file=%s:%i" % (filename, filename, len(text))
 

@@ -7,9 +7,10 @@ from rtags.rc import rc_get_referenced_symbol_location, rc_get_symbol_info, rc_g
 
 
 class Source(Base):
-
-    def supported_filetypes(self):
-        return ['c', 'cpp']
+    def __init__(self, vim):
+        Base.__init__(self, vim)
+        self.name = "RTags"
+        self.filetypes = ['c', 'cpp', 'objc', 'objcpp']
 
     def _find_references(self, symbol):
 
