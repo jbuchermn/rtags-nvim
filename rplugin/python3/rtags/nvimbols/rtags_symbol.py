@@ -1,5 +1,6 @@
 from nvimbols.symbol import Symbol, SymbolLocation
 from nvimbols.util import log
+from nvimbols.reference import ParentRef
 
 
 class RTagsSymbol(Symbol):
@@ -15,4 +16,11 @@ class RTagsSymbol(Symbol):
 
         location = SymbolLocation(filename, start_line, start_col, start_line, start_col + length)
 
-        Symbol.__init__(self, symbol['symbolName'], symbol['kind'], symbol['type'] if 'type' in symbol else '', location)
+        Symbol.__init__(self, location)
+
+        self.name = symbol['symbolName']
+        self.data['Kind'] = symbol['kind']
+        self.data['Type'] = symbol['type'] if 'type' in symbol else None
+
+        if 'parent' in symbol:
+            self.source_of[ParentRef.name] = [RTagsSymbol(symbol['parent'])]

@@ -24,7 +24,7 @@ def rc_reindex(filename, text):
 
 
 def rc_get_symbol_info(location):
-    command = "rc --absolute-path --json --symbol-info %s:%i:%i" % (location._filename, location._start_line, location._start_col)
+    command = "rc --absolute-path --json --symbol-info-include-parents --symbol-info %s:%i:%i" % (location.filename, location.start_line, location.start_col)
 
     p = Popen(command.split(" "), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     stdout_data, stderr_data = p.communicate()
@@ -39,7 +39,7 @@ def rc_get_symbol_info(location):
 
 
 def rc_get_referenced_symbol_location(location):
-    command = "rc --absolute-path --follow-location %s:%i:%i" % (location._filename, location._start_line, location._start_col)
+    command = "rc --absolute-path --follow-location %s:%i:%i" % (location.filename, location.start_line, location.start_col)
 
     p = Popen(command.split(" "), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     stdout_data, stderr_data = p.communicate()
@@ -57,7 +57,7 @@ def rc_get_referenced_symbol_location(location):
 
 
 def rc_get_referenced_by_symbol_locations(location):
-    command = "rc --absolute-path --max 100 --references %s:%i:%i" % (location._filename, location._start_line, location._start_col)
+    command = "rc --absolute-path --max 100 --references %s:%i:%i" % (location.filename, location.start_line, location.start_col)
 
     p = Popen(command.split(" "), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     stdout_data, stderr_data = p.communicate()
