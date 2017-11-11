@@ -123,10 +123,6 @@ class CMakeProject(RcJTask):
             vim_log(vim, "Executing rc -J in %s..." % os.path.dirname(self._cmakelists))
             vim_log(vim, rc_j(os.path.dirname(self._cmakelists)))
 
-            keep = vim.call("input", "Keep compile_commands.json (y/N)? ")
-            vim.command("echo(\"...\")")
-            if keep.strip() == "" or keep.strip() == "n" or keep.strip() == "N":
-                os.remove(os.path.join(os.path.dirname(self._cmakelists), "compile_commands.json"))
         elif os.path.isfile(os.path.join(os.path.dirname(self._cmakelists), "compile_commands.json")):
             vim_log(vim, "No compile_commands.json in temporary directory... Assuming in-tree build")
 
@@ -184,11 +180,6 @@ class BearMakeProject(RcJTask):
             vim_log(vim, "Executing rc -J in %s..." % os.path.dirname(self._makefile))
             vim_log(vim, rc_j(os.path.dirname(self._makefile)))
             
-            keep = vim.call("input", "Keep compile_commands.json (y/N)? ")
-            vim.command("echo(\"...\")")
-            if keep.strip() == "" or keep.strip() == "n" or keep.strip() == "N":
-                os.remove(os.path.join(os.path.dirname(self._makefile), "compile_commands.json"))
-
         else:
             vim_log(vim, "Bear failed to create compile_commands.json")
 
