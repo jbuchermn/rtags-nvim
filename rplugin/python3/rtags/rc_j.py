@@ -41,9 +41,6 @@ class RcJTask:
 class ExistingCompileCommands(RcJTask):
     def validate(self):
         compile_commands = None
-        if self._rtags_project is not None:
-            if os.path.isfile(os.path.join(self._rtags_project, "compile_commands.json")):
-                compile_commands = os.path.join(self._rtags_project, "compile_commands")
 
         if compile_commands is None and self._filename is not None:
             for f in find_file(os.path.dirname(self._filename), "compile_commands.json"):
@@ -53,6 +50,10 @@ class ExistingCompileCommands(RcJTask):
         if compile_commands is None and self._vim_directory is not None:
             if os.path.isfile(os.path.join(self._vim_directory, "compile_commands.json")):
                 compile_commands = os.path.join(self._vim_directory, "compile_commands")
+        
+        if compile_commands is None and self._rtags_project is not None:
+            if os.path.isfile(os.path.join(self._rtags_project, "compile_commands.json")):
+                compile_commands = os.path.join(self._rtags_project, "compile_commands")
 
         if compile_commands is None:
             return False
@@ -83,9 +84,6 @@ class CMakeProject(RcJTask):
     def validate(self):
         cmakelists = None
 
-        if(self._rtags_project and os.path.isfile(os.path.join(self._rtags_project, "CMakeLists.txt"))):
-            if(self.is_toplevel_cmakelists(os.path.join(self._rtags_project, "CMakeLists.txt"))):
-                cmakelists = os.path.join(self._rtags_project, "CMakeLists.txt")
 
         if(cmakelists is None and self._filename is not None):
             for f in find_file(os.path.dirname(self._filename), "CMakeLists.txt"):
@@ -93,9 +91,13 @@ class CMakeProject(RcJTask):
                     cmakelists = f
                     break
 
-        if(cmakelists is None and os.path.isfile(os.path.join(self._vim_directory, "CMakeLists.txt"))):
-            if(self.is_toplevel_cmakelists(os.path.join(self._vim_directory, "CMakeLists.txt"))):
+        if(cmakelists is None and self._vim_directory is not None):
+            if(os.path.isfile(os.path.join(self._vim_directory, "CMakeLists.txt")) and self.is_toplevel_cmakelists(os.path.join(self._vim_directory, "CMakeLists.txt"))):
                 cmakelists = os.path.join(self._vim_directory, "CMakeLists.txt")
+        
+        if(cmakelists is None and self._rtags_project is not None):
+            if(os.path.isfile(os.path.join(self._rtags_project, "CMakeLists.txt")) and self.is_toplevel_cmakelists(os.path.join(self._rtags_project, "CMakeLists.txt"))):
+                cmakelists = os.path.join(self._rtags_project, "CMakeLists.txt")
 
         if(cmakelists is None):
             return False
@@ -147,16 +149,18 @@ class BearMakeProject(RcJTask):
 
         makefile = None
 
-        if(self._rtags_project and os.path.isfile(os.path.join(self._rtags_project, "Makefile"))):
-            makefile = os.path.join(self._rtags_project, "Makefile")
-
         if(makefile is None and self._filename is not None):
             for f in find_file(os.path.dirname(self._filename), "Makefile"):
                 makefile = f
                 break
 
-        if(makefile is None and os.path.isfile(os.path.join(self._vim_directory, "Makefile"))):
-            makefile = os.path.join(self._vim_directory, "Makefile")
+        if(makefile is None and self._vim_directory is not None):
+            if(os.path.isfile(os.path.join(self._vim_directory, "Makefile"))):
+                makefile = os.path.join(self._vim_directory, "Makefile")
+        
+        if(makefile is None and self._rtags_project is not None):
+            if(os.path.isfile(os.path.join(self._rtags_project, "Makefile"))):
+                makefile = os.path.join(self._rtags_project, "Makefile")
 
         if(makefile is None):
             return False
