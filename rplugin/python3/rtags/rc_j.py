@@ -5,7 +5,14 @@ from subprocess import Popen, PIPE
 from abc import abstractmethod
 from rtags.rc import rc_current_project, rc_j
 from rtags.util import vim_log
+from itertools import filterfalse
 
+def unique(iterable):
+    seen = set()
+    seen_add = seen.add
+    for element in filterfalse(seen.__contains__, iterable):
+        seen_add(element)
+        yield element
 
 def find_file(directory, filename):
     """
@@ -19,16 +26,60 @@ def find_file(directory, filename):
         tmp = os.path.dirname(tmp)
 
 
+def find_compile_commands(filename, rtags_project, vim_directory):
+    if filename is not None:
+        yield from find_file(os.path.dirname(filename), "compile_commands.json")
+
+    if vim_directory is not None:
+        if os.path.isfile(os.path.join(vim_directory, "compile_commands.json")):
+            yield os.path.join(vim_directory, "compile_commands.json")
+
+    if rtags_project is not None:
+        if os.path.isfile(os.path.join(rtags_project, "compile_commands.json")):
+            yield os.path.join(rtags_project, "compile_commands.json")
+
+
+def find_makefiles(filename, rtags_project, vim_directory):
+    if filename is not None:
+        yield from find_file(os.path.dirname(filename), "Makefile")
+
+    if vim_directory is not None:
+        if(os.path.isfile(os.path.join(vim_directory, "Makefile"))):
+            yield os.path.join(vim_directory, "Makefile")
+
+    if rtags_project is not None:
+        if(os.path.isfile(os.path.join(rtags_project, "Makefile"))):
+            yield os.path.join(rtags_project, "Makefile")
+
+
+def is_toplevel_cmakelists(filename):
+    """
+    Recognises a CMakeLists.txt as root if it contains a "project(...)" line
+    (I don't know if this is the correct way to do this...)
+    """
+    with open(filename, 'r') as f:
+        for line in f:
+            if(line.strip().lower().startswith("project")):
+                return True
+    return False
+
+
+def find_cmakelists(filename, rtags_project, vim_directory):
+        if filename is not None:
+            for f in find_file(os.path.dirname(filename), "CMakeLists.txt"):
+                if(is_toplevel_cmakelists(f)):
+                    yield f
+
+        if vim_directory is not None:
+            if(os.path.isfile(os.path.join(vim_directory, "CMakeLists.txt")) and is_toplevel_cmakelists(os.path.join(vim_directory, "CMakeLists.txt"))):
+                yield os.path.join(vim_directory, "CMakeLists.txt")
+
+        if rtags_project is not None:
+            if(os.path.isfile(os.path.join(rtags_project, "CMakeLists.txt")) and is_toplevel_cmakelists(os.path.join(rtags_project, "CMakeLists.txt"))):
+                yield os.path.join(rtags_project, "CMakeLists.txt")
+
+
 class RcJTask:
-    def __init__(self, rtags_project, filename, vim_directory):
-        self._rtags_project = rtags_project
-        self._filename = filename
-        self._vim_directory = vim_directory
-
-    @abstractmethod
-    def validate(self):
-        pass
-
     @abstractmethod
     def string(self):
         pass
@@ -39,27 +90,8 @@ class RcJTask:
 
 
 class ExistingCompileCommands(RcJTask):
-    def validate(self):
-        compile_commands = None
-
-        if compile_commands is None and self._filename is not None:
-            for f in find_file(os.path.dirname(self._filename), "compile_commands.json"):
-                compile_commands = f
-                break
-
-        if compile_commands is None and self._vim_directory is not None:
-            if os.path.isfile(os.path.join(self._vim_directory, "compile_commands.json")):
-                compile_commands = os.path.join(self._vim_directory, "compile_commands")
-        
-        if compile_commands is None and self._rtags_project is not None:
-            if os.path.isfile(os.path.join(self._rtags_project, "compile_commands.json")):
-                compile_commands = os.path.join(self._rtags_project, "compile_commands")
-
-        if compile_commands is None:
-            return False
-        else:
-            self._compile_commands = compile_commands
-            return True
+    def __init__(self, compile_commands):
+        self._compile_commands = compile_commands
 
     def string(self):
         return "Use existing %s" % self._compile_commands
@@ -70,40 +102,8 @@ class ExistingCompileCommands(RcJTask):
 
 
 class CMakeProject(RcJTask):
-    def is_toplevel_cmakelists(self, filename):
-        """
-        Recognises a CMakeLists.txt as root if it contains a "project(...)" line
-        (I don't know if this is the correct way to do this...)
-        """
-        with open(filename, 'r') as f:
-            for line in f:
-                if(line.strip().lower().startswith("project")):
-                    return True
-        return False
-
-    def validate(self):
-        cmakelists = None
-
-
-        if(cmakelists is None and self._filename is not None):
-            for f in find_file(os.path.dirname(self._filename), "CMakeLists.txt"):
-                if(self.is_toplevel_cmakelists(f)):
-                    cmakelists = f
-                    break
-
-        if(cmakelists is None and self._vim_directory is not None):
-            if(os.path.isfile(os.path.join(self._vim_directory, "CMakeLists.txt")) and self.is_toplevel_cmakelists(os.path.join(self._vim_directory, "CMakeLists.txt"))):
-                cmakelists = os.path.join(self._vim_directory, "CMakeLists.txt")
-        
-        if(cmakelists is None and self._rtags_project is not None):
-            if(os.path.isfile(os.path.join(self._rtags_project, "CMakeLists.txt")) and self.is_toplevel_cmakelists(os.path.join(self._rtags_project, "CMakeLists.txt"))):
-                cmakelists = os.path.join(self._rtags_project, "CMakeLists.txt")
-
-        if(cmakelists is None):
-            return False
-        else:
-            self._cmakelists = cmakelists
-            return True
+    def __init__(self, cmakelists):
+        self._cmakelists = cmakelists
 
     def string(self):
         return "CMake: Generate compile_commands.json from %s" % self._cmakelists
@@ -138,35 +138,8 @@ class CMakeProject(RcJTask):
 
 
 class BearMakeProject(RcJTask):
-    def validate(self):
-        """
-        Check if bear is in the $PATH
-        """
-        p = Popen("which bear".split(" "), stdout=PIPE, stderr=PIPE)
-        stdout_data, stderr_data = p.communicate()
-        if(stdout_data.decode("utf-8").strip() == ""):
-            return False
-
-        makefile = None
-
-        if(makefile is None and self._filename is not None):
-            for f in find_file(os.path.dirname(self._filename), "Makefile"):
-                makefile = f
-                break
-
-        if(makefile is None and self._vim_directory is not None):
-            if(os.path.isfile(os.path.join(self._vim_directory, "Makefile"))):
-                makefile = os.path.join(self._vim_directory, "Makefile")
-        
-        if(makefile is None and self._rtags_project is not None):
-            if(os.path.isfile(os.path.join(self._rtags_project, "Makefile"))):
-                makefile = os.path.join(self._rtags_project, "Makefile")
-
-        if(makefile is None):
-            return False
-        else:
-            self._makefile = makefile
-            return True
+    def __init__(self, makefile):
+        self._makefile = makefile
 
     def string(self):
         return "Bear: Generate compile_commands.json from %s" % self._makefile
@@ -183,7 +156,6 @@ class BearMakeProject(RcJTask):
         if os.path.isfile(os.path.join(os.path.dirname(self._makefile), "compile_commands.json")):
             vim_log(vim, "Executing rc -J in %s..." % os.path.dirname(self._makefile))
             vim_log(vim, rc_j(os.path.dirname(self._makefile)))
-            
         else:
             vim_log(vim, "Bear failed to create compile_commands.json")
 
@@ -216,13 +188,14 @@ class RcJ:
                 self._rtags_project = None
 
     def start(self):
-        tasks = [
-            ExistingCompileCommands(self._rtags_project, self._filename, self._vim_directory),
-            CMakeProject(self._rtags_project, self._filename, self._vim_directory),
-            BearMakeProject(self._rtags_project, self._filename, self._vim_directory),
-        ]
+        p = Popen("which bear".split(" "), stdout=PIPE, stderr=PIPE)
+        stdout_data, stderr_data = p.communicate()
+        bear_installed = stdout_data.decode("utf-8").strip() != ""
 
-        tasks = [task for task in tasks if task.validate()]
+        tasks = [ExistingCompileCommands(compile_commands) for compile_commands in unique(find_compile_commands(self._filename, self._rtags_project, self._vim_directory))]
+        tasks+= [CMakeProject(cmakelists)                  for cmakelists       in unique(find_cmakelists      (self._filename, self._rtags_project, self._vim_directory))]
+        tasks+= [BearMakeProject(makefile)                 for makefile         in unique(find_makefiles       (self._filename, self._rtags_project, self._vim_directory))] if bear_installed else []
+
         if(len(tasks) == 0):
             self._vim.command("echo(\"Could not find a strategy to call rc -J automatically\")")
             return
