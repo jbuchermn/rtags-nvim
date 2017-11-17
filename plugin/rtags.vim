@@ -67,5 +67,5 @@ augroup end
 "
 
 command! RTagsJ :call rtags#rtags_J()
-
+command! RTagsLog :call rtags#rtagsLogfile()
 

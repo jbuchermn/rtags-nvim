@@ -4,6 +4,7 @@ from rtags.util import log, on_error
 from rtags.neomake.neomake_rtags import NeomakeRTags
 from rtags.rc import rc_reindex
 from rtags.rc_j import RcJ
+from rtags.rdm_log import RdmLog
 
 
 @neovim.plugin
@@ -28,6 +29,14 @@ class Main(object):
         try:
             rcj = RcJ(self._vim)
             rcj.start()
+        except Exception as err:
+            on_error(self._vim, err)
+
+    @neovim.function('_rtags_logfile', sync=True)
+    def rtags_logfile(self, args):
+        try:
+            rdmlog = RdmLog(self._vim)
+            rdmlog.show()
         except Exception as err:
             on_error(self._vim, err)
 
