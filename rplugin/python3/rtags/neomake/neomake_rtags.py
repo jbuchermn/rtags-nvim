@@ -1,19 +1,9 @@
 import json
 from subprocess import Popen, PIPE
 from rtags.util import log
+from rtags.rc import rc_get_diagnostics
 
-
-def rc_get_diagnostics(filename):
-    command = "rc --json --absolute-path --synchronous-diagnostics --diagnose %s" % filename
-
-    p = Popen(command.split(" "), stdout=PIPE, stderr=PIPE)
-    stdout_data, stderr_data = p.communicate()
-
-    stdout_data = stdout_data.decode("utf-8")
-    try:
-        return json.loads(stdout_data)
-    except Exception:
-        return None
+# TODO: Use rc_is_indexing
 
 
 class NeomakeRTags:

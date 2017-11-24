@@ -22,6 +22,24 @@ def rc_reindex(filename, text):
     p = Popen(command.split(" "), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     stdout_data, stderr_data = p.communicate(input=text.encode("utf-8"))
 
+def rc_is_indexing():
+    command = "rc --is-indexing"
+    
+    p = Popen(command.split(" "), stdout=PIPE, stderr=PIPE, cwd=directory)
+    stdout_data, stderr_data = p.communicate()
+    stdout_data.decode("utf-8").strip() != "0"
+
+def rc_get_diagnostics(filename):
+    command = "rc --json --absolute-path --synchronous-diagnostics --diagnose %s" % filename
+
+    p = Popen(command.split(" "), stdout=PIPE, stderr=PIPE)
+    stdout_data, stderr_data = p.communicate()
+
+    stdout_data = stdout_data.decode("utf-8")
+    try:
+        return json.loads(stdout_data)
+    except Exception:
+        return None
 
 def rc_get_symbol_info(location):
     command = "rc --absolute-path --json --symbol-info-include-parents --symbol-info %s:%i:%i" % (location.filename, location.start_line, location.start_col)

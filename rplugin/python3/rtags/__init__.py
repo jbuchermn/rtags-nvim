@@ -6,6 +6,7 @@ from rtags.rc import rc_reindex
 from rtags.rc_j import RcJ
 from rtags.rdm_log import RdmLog
 
+# TODO: Use rc_is_indexing
 
 @neovim.plugin
 class Main(object):
