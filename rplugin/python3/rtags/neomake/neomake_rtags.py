@@ -3,8 +3,6 @@ from subprocess import Popen, PIPE
 from rtags.util import log
 from rtags.rc import rc_get_diagnostics
 
-# TODO: Use rc_is_indexing
-
 
 class NeomakeRTags:
     def __init__(self, vim):

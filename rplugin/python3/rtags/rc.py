@@ -1,5 +1,7 @@
 import json
 from subprocess import Popen, PIPE
+from threading import Timer
+from rtags.util import log
 
 
 def rc_current_project():
@@ -9,6 +11,7 @@ def rc_current_project():
     stdout_data, stderr_data = p.communicate()
     return stdout_data.decode("utf-8").strip()
 
+
 def rc_j(directory):
     command = "rc -J"
 
@@ -16,18 +19,29 @@ def rc_j(directory):
     stdout_data, stderr_data = p.communicate()
     return stdout_data.decode("utf-8").strip()
 
+
 def rc_reindex(filename, text):
     command = "rc --absolute-path --reindex %s --unsaved-file=%s:%i" % (filename, filename, len(text))
 
     p = Popen(command.split(" "), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     stdout_data, stderr_data = p.communicate(input=text.encode("utf-8"))
 
+
 def rc_is_indexing():
     command = "rc --is-indexing"
-    
-    p = Popen(command.split(" "), stdout=PIPE, stderr=PIPE, cwd=directory)
+
+    p = Popen(command.split(" "), stdout=PIPE, stderr=PIPE)
     stdout_data, stderr_data = p.communicate()
-    stdout_data.decode("utf-8").strip() != "0"
+    return stdout_data.decode("utf-8").strip() != "0"
+
+
+def rc_in_index(filename):
+    command = "rc --absolute-path --is-indexed %s" % filename
+
+    p = Popen(command.split(" "), stdout=PIPE, stderr=PIPE)
+    stdout_data, stderr_data = p.communicate()
+    return stdout_data.decode("utf-8").strip() == "indexed"
+
 
 def rc_get_diagnostics(filename):
     command = "rc --json --absolute-path --synchronous-diagnostics --diagnose %s" % filename
@@ -40,6 +54,7 @@ def rc_get_diagnostics(filename):
         return json.loads(stdout_data)
     except Exception:
         return None
+
 
 def rc_get_symbol_info(location):
     command = "rc --absolute-path --json --symbol-info-include-parents --symbol-info %s:%i:%i" % (location.filename, location.start_line, location.start_col)
