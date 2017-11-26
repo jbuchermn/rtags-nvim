@@ -1,8 +1,8 @@
 from rtags.util import log
 from nvimbols.source.base import Base
 from nvimbols.symbol import Symbol, SymbolLocation
-from nvimbols.reference import TargetRef, ParentRef
-from rtags.rc import rc_get_referenced_symbol_location, rc_get_symbol_info, rc_get_referenced_by_symbol_locations
+from nvimbols.reference import TargetRef, ParentRef, InheritanceRef
+from rtags.rc import rc_get_referenced_symbol_location, rc_get_symbol_info, rc_get_referenced_by_symbol_locations, rc_get_class_hierarchy
 
 
 def get_location(data):
@@ -109,7 +109,13 @@ class Source(Base):
             for location in refs:
                 res += [location]
             res.loaded(incomplete)
+        
+        elif(reference == InheritanceRef):
+            supers, subs = rc_get_class_hierarchy(symbol.location)
+            for s in supers:
+                res += [SymbolLocation(*s)]
 
+            res.loaded()
         else:
             res.loaded(True)
 
@@ -123,6 +129,13 @@ class Source(Base):
             for location in refs:
                 res += [location]
             res.loaded(incomplete)
+        
+        elif(reference == InheritanceRef):
+            supers, subs = rc_get_class_hierarchy(symbol.location)
+            for s in subs:
+                res += [SymbolLocation(*s)]
+
+            res.loaded()
 
         else:
             res.loaded(True)

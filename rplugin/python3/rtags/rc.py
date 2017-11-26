@@ -1,7 +1,18 @@
 import json
+import re
 from subprocess import Popen, PIPE
 from threading import Timer
 from rtags.util import log
+
+LOCATION_PATTERN = re.compile(r'[^\s]+:[0-9]+:[0-9]+')
+
+def _extract_location(loc):
+    tmp = loc.split(':')
+    filename = tmp[0]
+    line = int(tmp[1])
+    col = int(tmp[2])
+
+    return (filename, line, col)
 
 
 def rc_current_project():
@@ -71,6 +82,65 @@ def rc_get_symbol_info(location):
         return None
 
 
+def rc_get_class_hierarchy(location):
+    command = "rc --absolute-path --class-hierarchy %s:%i:%i" % (location.filename, location.start_line, location.start_col)
+
+    p = Popen(command.split(" "), stdout=PIPE, stdin=PIPE, stderr=PIPE)
+    stdout_data, stderr_data = p.communicate()
+    stdout_data = stdout_data.decode("utf-8")
+
+    if(stdout_data == ""):
+        return None
+
+    data = stdout_data.split("\n")
+    super_idx = -1
+    sub_idx = -1
+    for i in range(len(data)):
+        if(data[i].strip() == "Superclasses:"):
+            super_idx = i
+        elif(data[i].strip() == "Subclasses:"):
+            sub_idx = i
+
+    super_data = []
+    sub_data = []
+    if super_idx != -1:
+        if sub_idx > super_idx:
+            super_data = data[super_idx + 1:sub_idx]
+        else:
+            super_data = data[super_idx + 1:]
+    if sub_idx != -1:
+        if super_idx > sub_idx:
+            sub_data = data[sub_idx + 1:super_idx]
+        else:
+            sub_data = data[sub_idx + 1:]
+    
+    def parse(d):
+        if d.strip() == "":
+            return None
+
+        indent = 0
+        while(d[indent] == ' '):
+            indent += 1
+            
+        loc = LOCATION_PATTERN.search(d)
+        if loc is None:
+            return None
+        loc = loc.group()
+
+        return (indent, loc)
+            
+    sub_data = [parse(d) for d in sub_data if parse(d) is not None]
+    super_data = [parse(d) for d in super_data if parse(d) is not None]
+
+    """
+    Only return immediate sub- and superclasses as querying this information is not performance critical
+    """
+    sub_data = [loc for (i, loc) in sub_data if i==4]
+    super_data = [loc for (i, loc) in super_data if i==4]
+
+    return [_extract_location(loc) for loc in super_data], [_extract_location(loc) for loc in sub_data]
+
+
 def rc_get_referenced_symbol_location(location):
     command = "rc --absolute-path --follow-location %s:%i:%i" % (location.filename, location.start_line, location.start_col)
 
@@ -81,13 +151,7 @@ def rc_get_referenced_symbol_location(location):
         return None
 
     location = stdout_data.split(' ')[0]
-    tmp = location.split(':')
-    filename = tmp[0]
-    line = int(tmp[1])
-    col = int(tmp[2])
-
-    return (filename, line, col)
-
+    return _extract_location(location)
 
 def rc_get_referenced_by_symbol_locations(location):
     command = "rc --absolute-path --max 100 --references %s:%i:%i" % (location.filename, location.start_line, location.start_col)
