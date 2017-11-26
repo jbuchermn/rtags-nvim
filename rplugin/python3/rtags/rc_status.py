@@ -10,9 +10,16 @@ class RcStatus:
         self._in_index = False
         self._indexing = True
 
-        self._get(True)
+        self._enabled = False
 
-    def _get(self, auto=False):
+    def enable(self, enabled):
+        if(not self._enabled and enabled):
+            self._enabled = enabled
+            self._get()
+
+        self._enabled = enabled
+
+    def _get(self):
         try:
             if(self._filename is not None):
                 in_index = rc_in_index(self._filename)
@@ -25,7 +32,7 @@ class RcStatus:
                 self._indexing = indexing
 
         finally:
-            if auto:
+            if self._enabled:
                 Timer(.5, RcStatus._get, args=[self, True]).start()
 
     def set_filename(self, filename):

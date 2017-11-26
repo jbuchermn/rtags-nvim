@@ -90,7 +90,7 @@ def rc_get_class_hierarchy(location):
     stdout_data = stdout_data.decode("utf-8")
 
     if(stdout_data == ""):
-        return None
+        return [], []
 
     data = stdout_data.split("\n")
     super_idx = -1

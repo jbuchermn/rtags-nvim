@@ -19,8 +19,16 @@ class Main(object):
 
         self._rcstatus = RcStatus(callback)
 
-    @neovim.function('_rtags_reindex_unsaved')
-    def reindex_unsaved(self, args):
+    @neovim.function('_rtags_enable_status_change')
+    def enable_status_change(self, args):
+        try:
+            enabled = (args[0]!=0)
+            self._rcstatus.enable(enabled)
+        except Exception as err:
+            on_error(self._vim, err)
+
+    @neovim.function('_rtags_reindex')
+    def reindex(self, args):
         try:
             buf = self._vim.current.buffer
             filename = buf.name
@@ -41,17 +49,7 @@ class Main(object):
 
     def _status(self, in_index, indexing):
         try:
-            if indexing:
-                status = "..."
-            elif in_index:
-                status = "INDEXED"
-            else:
-                status = "NOT IN INDEX"
-
-
-            self._vim.session.threadsafe_call(lambda: self._vim.call("airline#extensions#rtags#set_status", status))
-            if(not indexing):
-                self._vim.session.threadsafe_call(lambda: self._vim.call("rtags#indexing_finished"))
+            self._vim.session.threadsafe_call(lambda: self._vim.call("rtags#on_status_change", in_index, indexing))
         except Exception as err:
             on_error(self._vim, err)
 
