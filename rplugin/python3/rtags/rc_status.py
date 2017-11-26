@@ -15,17 +15,17 @@ class RcStatus:
     def enable(self, enabled):
         if(not self._enabled and enabled):
             self._enabled = enabled
-            self._get()
+            self._get(True)
 
         self._enabled = enabled
 
-    def _get(self):
+    def _get(self, force_refresh=False):
         try:
             if(self._filename is not None):
                 in_index = rc_in_index(self._filename)
                 indexing = rc_is_indexing()
 
-                if(indexing != self._indexing or in_index != self._in_index):
+                if force_refresh or (indexing != self._indexing or in_index != self._in_index):
                     self._callback(in_index, indexing)
 
                 self._in_index = in_index

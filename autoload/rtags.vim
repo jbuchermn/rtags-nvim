@@ -19,7 +19,13 @@ function! rtags#bufenter() abort
     if(enabled)
         call _rtags_filename_update()
     endif
+
     call _rtags_enable_status_change(enabled)
+    
+    if(exists(":AirlineRefresh"))
+        call airline#extensions#rtags#enable(enabled)
+        :AirlineRefresh
+    endif
 endfunction
 
 function! rtags#vimleave() abort
@@ -41,8 +47,12 @@ function! rtags#filetype() abort
         augroup end
     endif
 
-    call airline#extensions#rtags#enable(enabled)
     call _rtags_enable_status_change(enabled)
+    
+    if(exists(":AirlineRefresh"))
+        call airline#extensions#rtags#enable(enabled)
+        :AirlineRefresh
+    endif
 endfunction
 " }}}
 
