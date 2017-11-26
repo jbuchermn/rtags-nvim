@@ -62,6 +62,10 @@ function! rtags#on_status_change(in_index, indexing) abort
         :Neomake
     endif
 
+    if(exists(":NVimbolsClear") && !a:indexing)
+        :NVimbolsClear
+    endif
+
     if(exists(":AirlineRefresh"))
         let status = ""
         if(a:in_index && !a:indexing)

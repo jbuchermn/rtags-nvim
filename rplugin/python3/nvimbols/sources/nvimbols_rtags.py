@@ -19,7 +19,7 @@ def get_location(data):
 
 class RTagsSymbol(Symbol):
     def __init__(self, symbol):
-        Symbol.__init__(self)
+        super().__init__()
 
         self.name = symbol['symbolName']
         self.data['Kind'] = symbol['kind']
@@ -35,7 +35,7 @@ class RTagsSymbol(Symbol):
 
 class Source(Base):
     def __init__(self, vim):
-        Base.__init__(self, vim)
+        super().__init__(vim)
         self.name = "RTags"
         self.filetypes = ['c', 'cpp', 'objc', 'objcpp']
 

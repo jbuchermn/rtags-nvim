@@ -3,12 +3,10 @@ import re
 from rtags.rc import rc_get_autocompletions
 from deoplete.source.base import Base
 
-current = __file__
-
 
 class Source(Base):
     def __init__(self, vim):
-        Base.__init__(self, vim)
+        super().__init__(vim)
         self.name = 'rtags'
         self.mark = '[rtags]'
         self.filetypes = ['c', 'cpp', 'objc', 'objcpp']

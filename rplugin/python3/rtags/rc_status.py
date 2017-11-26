@@ -25,7 +25,7 @@ class RcStatus:
                 in_index = rc_in_index(self._filename)
                 indexing = rc_is_indexing()
 
-                if force_refresh or (indexing != self._indexing or in_index != self._in_index):
+                if force_refresh or indexing != self._indexing or in_index != self._in_index:
                     self._callback(in_index, indexing)
 
                 self._in_index = in_index
@@ -33,7 +33,7 @@ class RcStatus:
 
         finally:
             if self._enabled:
-                Timer(.5, RcStatus._get, args=[self, True]).start()
+                Timer(.5, RcStatus._get, args=[self]).start()
 
     def set_filename(self, filename):
         self._filename = filename
