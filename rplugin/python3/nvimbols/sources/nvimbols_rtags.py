@@ -25,12 +25,12 @@ class RTagsSymbol(Symbol):
         self.data['Kind'] = symbol['kind']
         self.data['Type'] = symbol['type'] if 'type' in symbol else None
 
+        parents = self.get_source_of(ParentRef)
+        parents.reset()
         if 'parent' in symbol:
-            parents = self.get_source_of(ParentRef)
             parent_location = SymbolLocation(*get_location(symbol['parent']))
-            parents.reset()
             parents += [parent_location]
-            parents.loaded()
+        parents.loaded()
 
 
 class Source(Base):

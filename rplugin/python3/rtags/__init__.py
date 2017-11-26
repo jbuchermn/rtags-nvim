@@ -71,8 +71,6 @@ class Main(object):
 
     @neovim.function('_rtags_neomake_get_list_entries', sync=True)
     def neomake_get_list_entries(self, args):
-        log("[GET_LIST_ENTRIES]")
-
         try:
             if(len(args) < 1):
                 return []
@@ -82,7 +80,6 @@ class Main(object):
 
             list_entries = self._neomake_rtags.get_list_entries(filename)
 
-            log("[GET_LIST_ENTRIES FINISHED]")
             return list_entries
 
         except Exception as err:
