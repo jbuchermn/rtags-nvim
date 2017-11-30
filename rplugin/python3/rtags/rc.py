@@ -1,10 +1,10 @@
 import json
 import re
 from subprocess import Popen, PIPE
-from threading import Timer
 from rtags.util import log
 
 LOCATION_PATTERN = re.compile(r'[^\s]+:[0-9]+:[0-9]+')
+
 
 def _extract_location(loc):
     tmp = loc.split(':')
@@ -113,7 +113,7 @@ def rc_get_class_hierarchy(location):
             sub_data = data[sub_idx + 1:super_idx]
         else:
             sub_data = data[sub_idx + 1:]
-    
+
     def parse(d):
         if d.strip() == "":
             return None
@@ -121,22 +121,22 @@ def rc_get_class_hierarchy(location):
         indent = 0
         while(d[indent] == ' '):
             indent += 1
-            
+
         loc = LOCATION_PATTERN.search(d)
         if loc is None:
             return None
         loc = loc.group()
 
         return (indent, loc)
-            
+
     sub_data = [parse(d) for d in sub_data if parse(d) is not None]
     super_data = [parse(d) for d in super_data if parse(d) is not None]
 
     """
     Only return immediate sub- and superclasses as querying this information is not performance critical
     """
-    sub_data = [loc for (i, loc) in sub_data if i==4]
-    super_data = [loc for (i, loc) in super_data if i==4]
+    sub_data = [loc for (i, loc) in sub_data if i == 4]
+    super_data = [loc for (i, loc) in super_data if i == 4]
 
     return [_extract_location(loc) for loc in super_data], [_extract_location(loc) for loc in sub_data]
 
@@ -153,8 +153,12 @@ def rc_get_referenced_symbol_location(location):
     location = stdout_data.split(' ')[0]
     return _extract_location(location)
 
-def rc_get_referenced_by_symbol_locations(location):
-    command = "rc --absolute-path --max 100 --references %s:%i:%i" % (location.filename, location.start_line, location.start_col)
+
+def rc_get_referenced_by_symbol_locations(location, preview=False):
+    if preview:
+        command = "rc --absolute-path --max 100 --references %s:%i:%i" % (location.filename, location.start_line, location.start_col)
+    else:
+        command = "rc --absolute-path --references %s:%i:%i" % (location.filename, location.start_line, location.start_col)
 
     p = Popen(command.split(" "), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     stdout_data, stderr_data = p.communicate()
@@ -175,12 +179,12 @@ def rc_get_referenced_by_symbol_locations(location):
 
         result += [(filename, line, col)]
 
-    incomplete = False
-    if(len(result) == 100):
+    full = True
+    if(preview and len(result) == 100):
         del result[99]
-        incomplete = True
+        full = False
 
-    return result, incomplete
+    return result, full
 
 
 def rc_get_autocompletions(filename, line, col, text):

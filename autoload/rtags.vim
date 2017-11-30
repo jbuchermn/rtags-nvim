@@ -58,13 +58,25 @@ endfunction
 
 " Status Change Callback {{{
 function! rtags#on_status_change(in_index, indexing) abort
-    if(exists(":Neomake") && g:rtags_enable_automake_once_indexed && !a:indexing)
-        :Neomake
+
+    " This method is actually called more often, than just when the status chenges
+    " to ensure up-to-date Airline. However, we don't want to issue Neomake
+    " and NVimbolsClear unless the status actually changes from indexing to
+    " not indexing
+    if(!exists("s:LastIndexing"))
+        let s:LastIndexing = a:indexing
     endif
 
-    if(exists(":NVimbolsClear") && !a:indexing)
-        :NVimbolsClear
+    if(s:LastIndexing && !a:indexing)
+        if(exists(":Neomake") && g:rtags_enable_automake_once_indexed && !a:indexing)
+            :Neomake
+        endif
+
+        if(exists(":NVimbolsClear") && !a:indexing)
+            :NVimbolsClear
+        endif
     endif
+    let s:LastIndexing = a:indexing
 
     if(exists(":AirlineRefresh"))
         let status = ""

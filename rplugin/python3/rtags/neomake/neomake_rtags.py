@@ -9,9 +9,11 @@ class NeomakeRTags:
         self._vim = vim
 
     def get_list_entries(self, filename):
+        log("Getting list entries for %s" % filename)
         try:
             errors_json = rc_get_diagnostics(filename)['checkStyle'][filename]
         except Exception:
+            log("...done")
             return []
 
         errors = []
@@ -22,7 +24,8 @@ class NeomakeRTags:
                 'col': e['column'],
                 'length': e['length'] if 'length' in e else None,
                 'type': 'E' if e['type'] == 'error' else 'W',
-                'text': e['message']
+                'text': e['message'] if 'message' in e else ''
             })
 
+        log("...done")
         return errors
