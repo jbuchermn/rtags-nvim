@@ -114,9 +114,6 @@ class Source(Base):
             for s in supers:
                 res += [self._graph.create_wrapper(SymbolLocation(*s))]
 
-        else:
-            full = False
-
         wrapper.source_of[reference.name].set(res, LOADABLE_FULL if full else LOADABLE_PREVIEW)
 
     def load_target_of(self, params):
@@ -134,9 +131,6 @@ class Source(Base):
             supers, subs = rc_get_class_hierarchy(wrapper.location)
             for s in subs:
                 res += [self._graph.create_wrapper(SymbolLocation(*s))]
-
-        else:
-            full = False
 
         wrapper.target_of[reference.name].set(res, LOADABLE_FULL if full else LOADABLE_PREVIEW)
 
