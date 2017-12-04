@@ -1,9 +1,10 @@
 from rtags.util import log
 from nvimbols.source.base import Base
+from nvimbols.graph import SYMBOL, SYMBOL_FILE
 from nvimbols.symbol import Symbol, SymbolLocation
 from nvimbols.loadable import LOADABLE_FULL, LOADABLE_PREVIEW
 from nvimbols.reference import TargetRef, ParentRef, InheritanceRef
-from rtags.rc import rc_get_referenced_symbol_location, rc_get_symbol_info, rc_get_referenced_by_symbol_locations, rc_get_class_hierarchy
+from rtags.rc import rc_get_referenced_symbol_location, rc_get_symbol_info, rc_get_referenced_by_symbol_locations, rc_get_class_hierarchy, rc_get_symbol_locations_in_file
 
 
 def get_location(data):
@@ -32,6 +33,11 @@ class Source(Base):
         super().__init__(vim)
         self.name = "RTags"
         self.filetypes = ['c', 'cpp', 'objc', 'objcpp']
+
+        self._cache = {}
+
+    def reset(self):
+        self._cache = {}
 
     def _find_references(self, location, preview=False):
 
@@ -102,39 +108,60 @@ class Source(Base):
         wrapper = params['wrapper']
         reference = params['reference']
 
-        res = []
-        full = True
+        if wrapper.type == SYMBOL:
+            if(reference == TargetRef):
+                res, full = self._find_references(wrapper.location, params['requested_level'] == LOADABLE_PREVIEW)
+                res = [self._graph.create_wrapper(loc) for loc in res]
 
-        if(reference == TargetRef):
-            res, full = self._find_references(wrapper.location, params['requested_level'] == LOADABLE_PREVIEW)
-            res = [self._graph.create_wrapper(loc) for loc in res]
+                wrapper.source_of[reference.name].set(res, LOADABLE_FULL if full else LOADABLE_PREVIEW)
 
-        elif(reference == InheritanceRef):
-            supers, subs = rc_get_class_hierarchy(wrapper.location)
-            for s in supers:
-                res += [self._graph.create_wrapper(SymbolLocation(*s))]
+            elif(reference == InheritanceRef):
+                supers, subs = rc_get_class_hierarchy(wrapper.location)
+                res = [self._graph.create_wrapper(SymbolLocation(*s)) for s in supers]
 
-        wrapper.source_of[reference.name].set(res, LOADABLE_FULL if full else LOADABLE_PREVIEW)
+                wrapper.source_of[reference.name].set(res)
+
+            elif(reference == ParentRef):
+                """
+                TODO: A bit hacky
+                """
+                wrapper.source_of[ParentRef.name].set([])
+                self.load_symbol(params)
+
+            else:
+                wrapper.source_of[reference.name].set([])
 
     def load_target_of(self, params):
         wrapper = params['wrapper']
         reference = params['reference']
 
-        res = []
-        full = True
+        def set_all_in_file(target, filename):
+            if filename not in self._cache:
+                self._cache[filename] = rc_get_symbol_locations_in_file(filename)
+            target.set([self._graph.create_wrapper(SymbolLocation(*loc)) for loc in self._cache[filename]])
 
-        if(reference == TargetRef):
-            res, full = self._find_referenced_by(wrapper.location, params['requested_level'] == LOADABLE_PREVIEW)
-            res = [self._graph.create_wrapper(loc) for loc in res]
+        if wrapper.type == SYMBOL:
+            if(reference == TargetRef):
+                res, full = self._find_referenced_by(wrapper.location, params['requested_level'] == LOADABLE_PREVIEW)
+                res = [self._graph.create_wrapper(loc) for loc in res]
 
-        elif(reference == InheritanceRef):
-            supers, subs = rc_get_class_hierarchy(wrapper.location)
-            for s in subs:
-                res += [self._graph.create_wrapper(SymbolLocation(*s))]
+                wrapper.target_of[reference.name].set(res, LOADABLE_FULL if full else LOADABLE_PREVIEW)
 
-        wrapper.target_of[reference.name].set(res, LOADABLE_FULL if full else LOADABLE_PREVIEW)
+            elif(reference == InheritanceRef):
+                supers, subs = rc_get_class_hierarchy(wrapper.location)
+                res = [self._graph.create_wrapper(SymbolLocation(*s)) for s in subs]
 
+                wrapper.target_of[reference.name].set(res)
 
+            elif(reference == ParentRef):
+                set_all_in_file(wrapper.target_of[ParentRef.name], wrapper.location.filename)
+
+            else:
+                wrapper.target_of[reference.name].set([])
+
+        elif wrapper.type == SYMBOL_FILE and reference == ParentRef:
+            set_all_in_file(wrapper.target_of[ParentRef.name], wrapper.location.filename)
+        
 
 
 
