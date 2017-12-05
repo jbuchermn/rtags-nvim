@@ -13,17 +13,40 @@ class Main(object):
     def __init__(self, vim):
         self._vim = vim
         self._neomake_rtags = NeomakeRTags(vim)
+        self._rcstatus = RcStatus(lambda in_index, indexing: self._status(in_index, indexing))
+        self._enabled = False
+        self._filename = ""
 
-        def callback(*args):
-            self._status(*args)
+    def _status(self, in_index, indexing):
+        if not self._enabled:
+            return
 
-        self._rcstatus = RcStatus(callback)
-
-    @neovim.function('_rtags_enable_status_change')
-    def enable_status_change(self, args):
         try:
-            enabled = (args[0]!=0)
-            self._rcstatus.enable(enabled)
+            self._vim.session.threadsafe_call(lambda: self._vim.call("rtags#on_status_change", in_index, indexing))
+
+            if in_index and not indexing:
+                list_entries = self._neomake_rtags.get_list_entries(self._filename)
+            else:
+                list_entries = []
+
+            self._vim.session.threadsafe_call(lambda: self._vim.call("rtags#on_list_entries_change", list_entries))
+        except Exception as err:
+            on_error(self._vim, err)
+
+    """
+    Asynchronous API
+    """
+    @neovim.function('_rtags_enable')
+    def enable(self, args):
+        try:
+            self._enabled = (args[0] != 0)
+
+            if self._enabled:
+                self._filename = self._vim.current.buffer.name
+                self._rcstatus.set_filename(self._filename)
+
+            self._rcstatus.enable(self._enabled)
+
         except Exception as err:
             on_error(self._vim, err)
 
@@ -38,52 +61,23 @@ class Main(object):
         except Exception as err:
             on_error(self._vim, err)
 
-    @neovim.function('_rtags_filename_update')
-    def filename_update(self, args):
-        try:
-            buf = self._vim.current.buffer
-            filename = buf.name
-            self._rcstatus.set_filename(filename)
-        except Exception as err:
-            on_error(self._vim, err)
-
-    def _status(self, in_index, indexing):
-        try:
-            self._vim.session.threadsafe_call(lambda: self._vim.call("rtags#on_status_change", in_index, indexing))
-        except Exception as err:
-            on_error(self._vim, err)
-
+    """
+    Synchronous API
+    """
     @neovim.function('_rtags_J', sync=True)
     def rtags_J(self, args):
         try:
-            rcj = RcJ(self._vim)
-            rcj.start()
+            RcJ(self._vim).start()
         except Exception as err:
             on_error(self._vim, err)
 
     @neovim.function('_rtags_logfile', sync=True)
     def rtags_logfile(self, args):
         try:
-            rdmlog = RdmLog(self._vim)
-            rdmlog.show()
+            RdmLog(self._vim).show()
         except Exception as err:
             on_error(self._vim, err)
 
-    @neovim.function('_rtags_neomake_get_list_entries', sync=True)
-    def neomake_get_list_entries(self, args):
-        try:
-            if(len(args) < 1):
-                return []
-
-            jobinfo = args[0]
-            filename = self._vim.current.buffer.name
-
-            list_entries = self._neomake_rtags.get_list_entries(filename)
-
-            return list_entries
-
-        except Exception as err:
-            on_error(self._vim, err)
 
 
 
