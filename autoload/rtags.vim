@@ -12,28 +12,15 @@ function! rtags#reindex()
 endfunction
 " }}}
 
+" Status {{{
+function! rtags#is_enabled() abort
+    return index(g:rtags_enabled_filetypes, &filetype) != -1
+endfunction
+" }}}
+
 " On Auto-Commands {{{
-
 function! rtags#bufenter() abort
-    let enabled = (index(g:rtags_enabled_filetypes, &filetype) != -1)
-    if(enabled)
-        call _rtags_filename_update()
-    endif
-
-    call _rtags_enable_status_change(enabled)
-    
-    if(exists(":AirlineRefresh"))
-        call airline#extensions#rtags#enable(enabled)
-        :AirlineRefresh
-    endif
-endfunction
-
-function! rtags#vimleave() abort
-    call _rtags_enable_status_change(0)
-endfunction
-
-function! rtags#filetype() abort
-    let enabled = (index(g:rtags_enabled_filetypes, &filetype) != -1)
+    let enabled = rtags#is_enabled()
     
     if(enabled && g:rtags_enable_autoreindex)
         augroup rtags_nvim_autoreindex_group
@@ -47,18 +34,18 @@ function! rtags#filetype() abort
         augroup end
     endif
 
-    call _rtags_enable_status_change(enabled)
-    
-    if(exists(":AirlineRefresh"))
-        call airline#extensions#rtags#enable(enabled)
-        :AirlineRefresh
-    endif
+    call _rtags_enable(enabled)
+endfunction
+
+function! rtags#vimleave() abort
+    call _rtags_enable(0)
 endfunction
 " }}}
 
-" Status Change Callback {{{
+" Status Change callbacks {{{
 function! rtags#on_status_change(in_index, indexing) abort
 
+    " TODO: This functionality should be moved to NVimbols
     " This method is actually called more often, than just when the status chenges
     " to ensure up-to-date Airline. However, we don't want to issue Neomake
     " and NVimbolsClear unless the status actually changes from indexing to
@@ -68,10 +55,6 @@ function! rtags#on_status_change(in_index, indexing) abort
     endif
 
     if(s:LastIndexing && !a:indexing)
-        if(exists(":Neomake") && g:rtags_enable_automake_once_indexed && !a:indexing)
-            :Neomake
-        endif
-
         if(exists(":NVimbolsClear") && !a:indexing)
             :NVimbolsClear
         endif
@@ -90,6 +73,13 @@ function! rtags#on_status_change(in_index, indexing) abort
 
         call airline#extensions#rtags#set_status(status)
         :AirlineRefresh
+    endif
+endfunction
+
+function! rtags#on_list_entries_change(list_entries) abort
+    call neomake#makers#rtags#set_list_entries(a:list_entries)
+    if(exists(":Neomake"))
+        :Neomake
     endif
 endfunction
 " }}}

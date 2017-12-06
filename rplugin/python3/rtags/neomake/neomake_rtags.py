@@ -1,5 +1,3 @@
-import json
-from subprocess import Popen, PIPE
 from rtags.util import log
 from rtags.rc import rc_get_diagnostics
 
@@ -9,11 +7,9 @@ class NeomakeRTags:
         self._vim = vim
 
     def get_list_entries(self, filename):
-        log("Getting list entries for %s" % filename)
         try:
             errors_json = rc_get_diagnostics(filename)['checkStyle'][filename]
         except Exception:
-            log("...done")
             return []
 
         errors = []
@@ -27,5 +23,4 @@ class NeomakeRTags:
                 'text': e['message'] if 'message' in e else ''
             })
 
-        log("...done")
         return errors

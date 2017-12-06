@@ -5,15 +5,9 @@ function! airline#extensions#rtags#init(ext)
     call a:ext.add_statusline_func('airline#extensions#rtags#apply')
 endfunction
 
-if(!exists('s:enabled'))
-    let s:enabled = 0
-endif
-function! airline#extensions#rtags#enable(enabled)
-    let s:enabled = a:enabled
-endfunction
-
 function! airline#extensions#rtags#apply(...)
-    if(s:enabled)
+    let enabled = rtags#is_enabled()
+    if(enabled)
         let w:airline_section_c = get(w:, 'airline_section_c', g:airline_section_c)
         let w:airline_section_c .= s:spc . '%{airline#extensions#rtags#get_status()}'
     endif

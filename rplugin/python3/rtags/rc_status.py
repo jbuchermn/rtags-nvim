@@ -11,23 +11,26 @@ class RcStatus:
         self._indexing = True
 
         self._enabled = False
+        self._force_refresh = False
 
     def enable(self, enabled):
         if(not self._enabled and enabled):
             self._enabled = enabled
-            self._get(True)
+            self._force_refresh = True
+            self._get()
 
         self._enabled = enabled
 
-    def _get(self, force_refresh=False):
+    def _get(self):
         try:
             if(self._filename is not None):
                 in_index = rc_in_index(self._filename)
                 indexing = rc_is_indexing()
 
-                if force_refresh or indexing != self._indexing or in_index != self._in_index:
+                if self._force_refresh or indexing != self._indexing or in_index != self._in_index:
                     self._callback(in_index, indexing)
 
+                self._force_refresh = False
                 self._in_index = in_index
                 self._indexing = indexing
 
@@ -37,4 +40,5 @@ class RcStatus:
 
     def set_filename(self, filename):
         self._filename = filename
+        self._force_refresh = True
 
