@@ -202,8 +202,11 @@ def rc_get_autocompletions(filename, line, col, text):
         return None
 
 
-def rc_get_symbol_locations_in_file(filename):
-    command = "rc --absolute-path --find-symbols --path-filter %s" % filename
+def rc_get_symbol_locations_in_file(filename, kinds=None):
+    if kinds is None:
+        command = "rc --absolute-path --find-symbols --path-filter %s" % filename
+    else:
+        command = "rc --absolute-path --find-symbols --path-filter %s --kind-filter %s" % (filename, ",".join(kinds))
 
     p = Popen(command.split(" "), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     stdout_data, stderr_data = p.communicate()
@@ -219,6 +222,27 @@ def rc_get_symbol_locations_in_file(filename):
         result += [_extract_location(line.split()[0])]
 
     return result
+
+
+def rc_all_kinds():
+    command = "rc --list-cursor-kinds"
+
+    p = Popen(command.split(" "), stdout=PIPE, stdin=PIPE, stderr=PIPE)
+    stdout_data, stderr_data = p.communicate()
+    stdout_data = stdout_data.decode("utf-8")
+    if(stdout_data == ""):
+        return []
+
+    result = []
+    for line in stdout_data.split("\n"):
+        if line.strip() == "":
+            continue
+
+        result += [line.strip()]
+
+    return result
+
+
 
 
 

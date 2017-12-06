@@ -1,10 +1,11 @@
 from rtags.util import log
+from threading import Lock
 from nvimbols.source.base import Base
 from nvimbols.graph import SYMBOL, SYMBOL_FILE
-from nvimbols.symbol import Symbol, SymbolLocation
+from nvimbols.symbol import Symbol, SymbolLocation, SymbolLocationFile
 from nvimbols.loadable import LOADABLE_FULL, LOADABLE_PREVIEW
 from nvimbols.reference import TargetRef, ParentRef, InheritanceRef
-from rtags.rc import rc_get_referenced_symbol_location, rc_get_symbol_info, rc_get_referenced_by_symbol_locations, rc_get_class_hierarchy, rc_get_symbol_locations_in_file
+from rtags.rc import rc_get_referenced_symbol_location, rc_get_symbol_info, rc_get_referenced_by_symbol_locations, rc_get_class_hierarchy, rc_get_symbol_locations_in_file, rc_all_kinds
 
 
 def get_location(data):
@@ -33,8 +34,11 @@ class Source(Base):
         super().__init__(vim)
         self.name = "RTags"
         self.filetypes = ['c', 'cpp', 'objc', 'objcpp']
+        self.kinds = rc_all_kinds()
+        self._children_kinds = ['ClassDecl', 'CXXMethod', 'FieldDecl', 'CXXConstructor', 'FunctionDecl', 'Namespace']
 
         self._cache = {}
+        self._cache_lock = Lock()
 
     def reset(self):
         self._cache = {}
@@ -103,6 +107,8 @@ class Source(Base):
             if 'parent' in symbol:
                 parent_location = SymbolLocation(*get_location(symbol['parent']))
                 wrapper.source_of[ParentRef.name].set([self._graph.create_wrapper(parent_location)])
+            else:
+                wrapper.source_of[ParentRef.name].set([self._graph.create_wrapper(SymbolLocationFile(wrapper.location.filename))])
 
     def load_source_of(self, params):
         wrapper = params['wrapper']
@@ -122,10 +128,6 @@ class Source(Base):
                 wrapper.source_of[reference.name].set(res)
 
             elif(reference == ParentRef):
-                """
-                TODO: A bit hacky
-                """
-                wrapper.source_of[ParentRef.name].set([])
                 self.load_symbol(params)
 
             else:
@@ -136,9 +138,10 @@ class Source(Base):
         reference = params['reference']
 
         def set_all_in_file(target, filename):
-            if filename not in self._cache:
-                self._cache[filename] = rc_get_symbol_locations_in_file(filename)
-            target.set([self._graph.create_wrapper(SymbolLocation(*loc)) for loc in self._cache[filename]])
+            with self._cache_lock:
+                if filename not in self._cache:
+                    self._cache[filename] = rc_get_symbol_locations_in_file(filename, self._children_kinds)
+                target.set([self._graph.create_wrapper(SymbolLocation(*loc)) for loc in self._cache[filename]])
 
         if wrapper.type == SYMBOL:
             if(reference == TargetRef):
