@@ -1,5 +1,6 @@
 import re
 
+from rtags.util import log
 from rtags.rc import rc_get_autocompletions
 from deoplete.source.base import Base
 
@@ -26,48 +27,24 @@ class Source(Base):
         col = (context['complete_position'] + 1)
         buf = self.vim.current.buffer
         filename = buf.name
+        
+        log("Getting completions at %s:%i:%i..." % (filename, line, col))
+
         text = "\n".join(buf)
 
         completions_json = rc_get_autocompletions(filename, line, col, text)
         if(completions_json is None or 'completions' not in completions_json):
+            log("...empty")
             return []
 
         completions = []
         for raw_completion in completions_json['completions']:
             completion = {'dup': 1}
-            if raw_completion['kind'] == "VarDecl":
-                completion['abbr'] = "[V] " + raw_completion['completion']
-                completion['word'] = raw_completion['completion']
-                completion['kind'] = raw_completion['kind']
-                completion['menu'] = raw_completion['brief_comment']
-            elif raw_completion['kind'] == "ParmDecl":
-                completion['kind'] = " ".join(raw_completion['signature'].split(" ")[:-1])
-                completion['word'] = raw_completion['completion']
-                completion['abbr'] = "[P] " + raw_completion['completion']
-                completion['menu'] = raw_completion['brief_comment']
-            elif raw_completion['kind'] == "FieldDecl":
-                completion['kind'] = " ".join(raw_completion['signature'].split(" ")[:-1])
-                completion['word'] = raw_completion['completion']
-                completion['abbr'] = "[S] " + raw_completion['completion']
-                completion['menu'] = raw_completion['brief_comment']
-            elif raw_completion['kind'] == "FunctionDecl":
-                completion['kind'] = raw_completion['signature']
-                completion['word'] = raw_completion['completion'] + "("
-                completion['abbr'] = "[F] " + raw_completion['completion'] + "("
-                completion['menu'] = raw_completion['brief_comment']
-            elif raw_completion['kind'] == "CXXMethod":
-                completion['kind'] = raw_completion['signature']
-                completion['word'] = raw_completion['completion'] + "("
-                completion['abbr'] = "[M] " + raw_completion['completion'] + "("
-                completion['menu'] = raw_completion['brief_comment']
-            elif raw_completion['kind'] == "NotImplemented":
-                completion['word'] = raw_completion['completion']
-                completion['abbr'] = "[K] " + raw_completion['completion']
-            else:
-                completion['word'] = raw_completion['completion']
-                completion['menu'] = raw_completion['brief_comment']
-                completion['kind'] = raw_completion['kind']
+            completion['word'] = raw_completion['completion']
+            completion['menu'] = raw_completion['signature']
+            completion['kind'] = raw_completion['kind']
             completions.append(completion)
 
+        log("...done: %i" % len(completions))
         return completions
 

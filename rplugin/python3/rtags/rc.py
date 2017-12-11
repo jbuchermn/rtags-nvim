@@ -188,7 +188,7 @@ def rc_get_referenced_by_symbol_locations(location, preview=False):
 
 
 def rc_get_autocompletions(filename, line, col, text):
-    command = "rc --json --absolute-path --synchronous-completions -l %s:%i:%i --unsaved-file=%s:%i" % (filename, line, col, filename, len(text))
+    command = "rc --json --absolute-path --synchronous-completions --code-complete-no-wait --code-complete-at %s:%i:%i --unsaved-file=%s:%i" % (filename, line, col, filename, len(text))
 
     p = Popen(command.split(" "), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     stdout_data, stderr_data = p.communicate(input=text.encode("utf-8"))

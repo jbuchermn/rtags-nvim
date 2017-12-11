@@ -6,6 +6,9 @@ from nvimbols.reference import TargetRef, ParentRef, InheritanceRef
 from rtags.rc import rc_get_referenced_symbol_location, rc_get_symbol_info, rc_get_referenced_by_symbol_locations, rc_get_class_hierarchy
 
 
+
+
+
 def get_location(data):
     location = data['location']
     length = data['symbolLength']
