@@ -39,7 +39,7 @@ def rc_reindex(filename, text):
 
 
 def rc_is_indexing():
-    command = "rc --is-indexing"
+    command = "rc --silent-query --is-indexing"
 
     p = Popen(command.split(" "), stdout=PIPE, stderr=PIPE)
     stdout_data, stderr_data = p.communicate()
@@ -47,7 +47,7 @@ def rc_is_indexing():
 
 
 def rc_in_index(filename):
-    command = "rc --absolute-path --is-indexed %s" % filename
+    command = "rc --silent-query --absolute-path --is-indexed %s" % filename
 
     p = Popen(command.split(" "), stdout=PIPE, stderr=PIPE)
     stdout_data, stderr_data = p.communicate()
