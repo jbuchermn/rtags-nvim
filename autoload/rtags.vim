@@ -38,7 +38,7 @@ function! rtags#bufenter() abort
 endfunction
 
 function! rtags#vimleave() abort
-    call _rtags_enable(0)
+    call _rtags_vimleave()
 endfunction
 " }}}
 

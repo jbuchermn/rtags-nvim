@@ -5,13 +5,14 @@ from rtags.neomake.neomake_rtags import NeomakeRTags
 from rtags.rc import rc_reindex
 from rtags.rc_j import RcJ
 from rtags.rc_status import RcStatus
-from rtags.rdm_log import RdmLog
+from rtags.rdm import Rdm
 
 
 @neovim.plugin
 class Main(object):
     def __init__(self, vim):
         self._vim = vim
+        self._rdm = Rdm(vim)
         self._neomake_rtags = NeomakeRTags(vim)
         self._rcstatus = RcStatus(lambda in_index, indexing: self._status(in_index, indexing))
         self._enabled = False
@@ -44,6 +45,7 @@ class Main(object):
             if self._enabled:
                 self._filename = self._vim.current.buffer.name
                 self._rcstatus.set_filename(self._filename)
+                self._rdm.ensure_running()
 
             self._rcstatus.enable(self._enabled)
 
@@ -61,6 +63,14 @@ class Main(object):
         except Exception as err:
             on_error(self._vim, err)
 
+    @neovim.function('_rtags_vimleave')
+    def vimleave(self, args):
+        try:
+            self._rcstatus.enable(False)
+            self._rdm.finish()
+        except Exception as err:
+            on_error(self._vim, err)
+
     """
     Synchronous API
     """
@@ -74,7 +84,7 @@ class Main(object):
     @neovim.function('_rtags_logfile', sync=True)
     def rtags_logfile(self, args):
         try:
-            RdmLog(self._vim).show()
+            self._rdm.show_log()
         except Exception as err:
             on_error(self._vim, err)
 

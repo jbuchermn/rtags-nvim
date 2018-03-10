@@ -9,7 +9,7 @@ def error(vim, expr):
 def vim_log(vim, expr):
     expr = str(expr)
     for line in expr.splitlines():
-        vim.command("echom(\"[rtags] %s \")" % line.replace("\"", "''"))  # replace("\"", "\\\"") does not work
+        vim.command("echom(\"[rtags] %s\")" % line.replace("\"", "''"))
 
 
 def on_error(vim, err):

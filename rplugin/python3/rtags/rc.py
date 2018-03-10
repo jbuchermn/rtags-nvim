@@ -23,6 +23,14 @@ def rc_current_project():
     return stdout_data.decode("utf-8").strip()
 
 
+def rc_check_rdm():
+    command = "rc --current-project"
+
+    p = Popen(command.split(" "), stdout=PIPE, stderr=PIPE)
+    stdout_data, stderr_data = p.communicate()
+    return "Can't seem to connect" not in stdout_data.decode("utf-8").strip()
+
+
 def rc_j(directory):
     command = "rc -J"
 
