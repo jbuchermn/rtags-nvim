@@ -3,11 +3,13 @@ from rtags.util import vim_log
 
 POSSIBLE_LOGFILE_LOCATIONS = [
     "/var/log/rtags",
-    "/usr/local/var/log"
+    "/usr/local/var/log",
+    "/var/run/user/1000"
 ]
 
 POSSIBLE_LOGFILE_NAMES = [
-    "rtags.log"
+    "rtags.log",
+    "rdm.log"
 ]
 
 
