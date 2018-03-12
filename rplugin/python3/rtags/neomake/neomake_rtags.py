@@ -1,4 +1,3 @@
-from rtags.util import log
 from rtags.rc import rc_get_diagnostics
 
 

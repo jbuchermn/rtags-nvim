@@ -1,12 +1,17 @@
 from rtags.util import log
 from nvimbols.source.base import Base
-from nvimbols.symbol import Symbol, SymbolLocation
-from nvimbols.loadable import LOADABLE_FULL, LOADABLE_PREVIEW
-from nvimbols.reference import TargetRef, ParentRef, InheritanceRef
-from rtags.rc import rc_get_referenced_symbol_location, rc_get_symbol_info, rc_get_referenced_by_symbol_locations, rc_get_class_hierarchy
-
-
-
+from nvimbols.location import Location
+from nvimbols.symbol import Symbol, LoadableState
+from nvimbols.reference import (ParentReference,
+                                TargetReference,
+                                InheritanceReference)
+from nvimbols.request import (LoadSymbolRequest,
+                              LoadReferencesRequest,
+                              LoadAllSymbolsInFileRequest)
+from rtags.rc import (rc_get_referenced_symbol_location,
+                      rc_get_symbol_info,
+                      rc_get_referenced_by_symbol_locations,
+                      rc_get_class_hierarchy)
 
 
 def get_location(data):
@@ -18,16 +23,14 @@ def get_location(data):
     start_line = int(tmp[1])
     start_col = int(tmp[2])
 
-    return filename, start_line, start_col, start_line, start_col + length
+    return Location(filename, start_line, start_col, start_line, start_col + length)
 
 
 class RTagsSymbol(Symbol):
-    def __init__(self, symbol):
-        name = symbol['symbolName']
-        kind = symbol['kind']
-
-        super().__init__(name, kind)
-        self.data['Type'] = symbol['type'] if 'type' in symbol else None
+    def set(self, data):
+        self.name = data['symbolName']
+        self.kind = data['kind']
+        self.type = data['type'] if 'type' in data else None
 
 
 class Source(Base):
@@ -37,11 +40,10 @@ class Source(Base):
         self.filetypes = ['c', 'cpp', 'objc', 'objcpp']
 
     def _find_references(self, location, preview=False):
-
         def try_find_ref(location):
             referenced_location = rc_get_referenced_symbol_location(location)
-            if(referenced_location is not None):
-                return SymbolLocation(*referenced_location)
+            if referenced_location is not None:
+                return Location(*referenced_location)
 
         cur = location
         refs = []
@@ -71,7 +73,7 @@ class Source(Base):
 
         res = []
         for loc in referenced_by_locations:
-            ref = SymbolLocation(*loc)
+            ref = Location(*loc)
 
             if(ref == location or location.contains(ref) or ref.contains(location)):
                 continue
@@ -80,71 +82,88 @@ class Source(Base):
 
         return res, full
 
-    def load_symbol(self, params):
-        wrapper = params['wrapper']
+    def request(self, req):
+        if isinstance(req, LoadSymbolRequest):
+            data = rc_get_symbol_info(req.location)
 
-        symbol = rc_get_symbol_info(wrapper.location)
+            if data is None:
+                req.graph.empty(req.location)
+                return False
+            else:
+                location = get_location(data)
+                symbol = req.graph.symbol(location, RTagsSymbol(location))
+                symbol.set(data)
 
-        if(symbol is None):
-            wrapper.symbol.set(None)
-        else:
-            filename, start_line, start_col, end_line, end_col = get_location(symbol)
+                if 'parent' in data:
+                    location = get_location(data['parent'])
+                    parent = req.graph.symbol(location, RTagsSymbol(location))
+                    symbol.reference_to(ParentReference(), parent)
+                    symbol.fulfill_source_of(ParentReference, LoadableState.FULL)
 
-            wrapper.location.filename = filename
-            wrapper.location.start_line = start_line
-            wrapper.location.start_col = start_col
-            wrapper.location.end_line = end_line
-            wrapper.location.end_col = end_col
+                return True
 
-            wrapper.symbol.set(RTagsSymbol(symbol))
-            if 'parent' in symbol:
-                parent_location = SymbolLocation(*get_location(symbol['parent']))
-                wrapper.source_of[ParentRef.name].set([self._graph.create_wrapper(parent_location)])
+        elif isinstance(req, LoadReferencesRequest):
+            if req.source_of:
+                if req.reference_class == TargetReference:
+                    res, full = self._find_references(req.symbol.location, req.state < LoadableState.FULL)
+                    for loc in res:
+                        symbol = req.graph.symbol(loc, RTagsSymbol(loc))
+                        req.symbol.reference_to(TargetReference(), symbol)
+                    req.symbol.fulfill_source_of(TargetReference,
+                                                 LoadableState.FULL if full else LoadableState.PREVIEW)
+                    return False
 
-    def load_source_of(self, params):
-        wrapper = params['wrapper']
-        reference = params['reference']
+                elif req.reference_class == InheritanceReference:
+                    supers, subs = rc_get_class_hierarchy(req.symbol.location)
+                    for loc in supers:
+                        location = Location(*loc)
+                        symbol = req.graph.symbol(location, RTagsSymbol(location))
+                        req.symbol.reference_to(InheritanceReference(), symbol)
+                    req.symbol.fulfill_source_of(InheritanceReference,
+                                                 LoadableState.FULL)
+                    return False
 
-        res = []
-        full = True
+                elif req.reference_class == ParentReference:
+                    data = rc_get_symbol_info(req.symbol.location)
+                    if 'parent' in data:
+                        location = get_location(data['parent'])
+                        parent = req.graph.symbol(location, RTagsSymbol(location))
+                        req.symbol.reference_to(ParentReference(), parent)
+                    req.symbol.fulfill_source_of(ParentReference,
+                                                 LoadableState.FULL)
+                    return False
 
-        if(reference == TargetRef):
-            res, full = self._find_references(wrapper.location, params['requested_level'] == LOADABLE_PREVIEW)
-            res = [self._graph.create_wrapper(loc) for loc in res]
+            else:
+                if req.reference_class == TargetReference:
+                    res, full = self._find_referenced_by(req.symbol.location, req.state < LoadableState.FULL)
+                    for loc in res:
+                        symbol = req.graph.symbol(loc, RTagsSymbol(loc))
+                        req.symbol.reference_from(TargetReference(), symbol)
+                    req.symbol.fulfill_target_of(TargetReference,
+                                                 LoadableState.FULL if full else LoadableState.PREVIEW)
+                    return False
 
-        elif(reference == InheritanceRef):
-            supers, subs = rc_get_class_hierarchy(wrapper.location)
-            for s in supers:
-                res += [self._graph.create_wrapper(SymbolLocation(*s))]
+                elif req.reference_class == InheritanceReference:
+                    supers, subs = rc_get_class_hierarchy(req.symbol.location)
+                    for loc in subs:
+                        location = Location(*loc)
+                        symbol = req.graph.symbol(location, RTagsSymbol(location))
+                        req.symbol.reference_from(InheritanceReference(), symbol)
+                    req.symbol.fulfill_target_of(InheritanceReference,
+                                                 LoadableState.FULL)
+                    return False
 
-        wrapper.source_of[reference.name].set(res, LOADABLE_FULL if full else LOADABLE_PREVIEW)
+                elif req.reference_class == ParentReference:
+                    """
+                    Request all symbols in the file, these will set parents, so all children are known
 
-    def load_target_of(self, params):
-        wrapper = params['wrapper']
-        reference = params['reference']
+                    TODO: Children of all symbols in the file are known.
+                    """
+                    # self.request(LoadAllSymbolsInFileRequest(req.symbol.location.filename))
+                    return True
 
-        res = []
-        full = True
-
-        if(reference == TargetRef):
-            res, full = self._find_referenced_by(wrapper.location, params['requested_level'] == LOADABLE_PREVIEW)
-            res = [self._graph.create_wrapper(loc) for loc in res]
-
-        elif(reference == InheritanceRef):
-            supers, subs = rc_get_class_hierarchy(wrapper.location)
-            for s in subs:
-                res += [self._graph.create_wrapper(SymbolLocation(*s))]
-
-        wrapper.target_of[reference.name].set(res, LOADABLE_FULL if full else LOADABLE_PREVIEW)
-
-
-
-
-
-
-
-
-
+        elif isinstance(req, LoadAllSymbolsInFileRequest):
+            raise Exception("Not implemented")
 
 
 
