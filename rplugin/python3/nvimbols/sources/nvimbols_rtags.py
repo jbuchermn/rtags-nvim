@@ -1,13 +1,14 @@
 from rtags.util import log
 from nvimbols.source.base import Base
 from nvimbols.location import Location
-from nvimbols.symbol import Symbol, LoadableState
+from nvimbols.loadable_state import LoadableState
+from nvimbols.symbol import Symbol
 from nvimbols.reference import (ParentReference,
                                 TargetReference,
                                 InheritanceReference)
 from nvimbols.request import (LoadSymbolRequest,
                               LoadReferencesRequest,
-                              LoadAllSymbolsInFileRequest)
+                              LoadSubGraphFileRequest)
 from rtags.rc import (rc_get_referenced_symbol_location,
                       rc_get_symbol_info,
                       rc_get_referenced_by_symbol_locations,
@@ -91,12 +92,12 @@ class Source(Base):
                 return False
             else:
                 location = get_location(data)
-                symbol = req.graph.symbol(location, RTagsSymbol(location))
+                symbol = req.graph.symbol(location, RTagsSymbol)
                 symbol.set(data)
 
                 if 'parent' in data:
                     location = get_location(data['parent'])
-                    parent = req.graph.symbol(location, RTagsSymbol(location))
+                    parent = req.graph.symbol(location, RTagsSymbol)
                     symbol.reference_to(ParentReference(), parent)
                     symbol.fulfill_source_of(ParentReference, LoadableState.FULL)
 
@@ -107,7 +108,7 @@ class Source(Base):
                 if req.reference_class == TargetReference:
                     res, full = self._find_references(req.symbol.location, req.state < LoadableState.FULL)
                     for loc in res:
-                        symbol = req.graph.symbol(loc, RTagsSymbol(loc))
+                        symbol = req.graph.symbol(loc, RTagsSymbol)
                         req.symbol.reference_to(TargetReference(), symbol)
                     req.symbol.fulfill_source_of(TargetReference,
                                                  LoadableState.FULL if full else LoadableState.PREVIEW)
@@ -117,7 +118,7 @@ class Source(Base):
                     supers, subs = rc_get_class_hierarchy(req.symbol.location)
                     for loc in supers:
                         location = Location(*loc)
-                        symbol = req.graph.symbol(location, RTagsSymbol(location))
+                        symbol = req.graph.symbol(location, RTagsSymbol)
                         req.symbol.reference_to(InheritanceReference(), symbol)
                     req.symbol.fulfill_source_of(InheritanceReference,
                                                  LoadableState.FULL)
@@ -127,7 +128,7 @@ class Source(Base):
                     data = rc_get_symbol_info(req.symbol.location)
                     if 'parent' in data:
                         location = get_location(data['parent'])
-                        parent = req.graph.symbol(location, RTagsSymbol(location))
+                        parent = req.graph.symbol(location, RTagsSymbol)
                         req.symbol.reference_to(ParentReference(), parent)
                     req.symbol.fulfill_source_of(ParentReference,
                                                  LoadableState.FULL)
@@ -137,7 +138,7 @@ class Source(Base):
                 if req.reference_class == TargetReference:
                     res, full = self._find_referenced_by(req.symbol.location, req.state < LoadableState.FULL)
                     for loc in res:
-                        symbol = req.graph.symbol(loc, RTagsSymbol(loc))
+                        symbol = req.graph.symbol(loc, RTagsSymbol)
                         req.symbol.reference_from(TargetReference(), symbol)
                     req.symbol.fulfill_target_of(TargetReference,
                                                  LoadableState.FULL if full else LoadableState.PREVIEW)
@@ -147,7 +148,7 @@ class Source(Base):
                     supers, subs = rc_get_class_hierarchy(req.symbol.location)
                     for loc in subs:
                         location = Location(*loc)
-                        symbol = req.graph.symbol(location, RTagsSymbol(location))
+                        symbol = req.graph.symbol(location, RTagsSymbol)
                         req.symbol.reference_from(InheritanceReference(), symbol)
                     req.symbol.fulfill_target_of(InheritanceReference,
                                                  LoadableState.FULL)
@@ -162,8 +163,8 @@ class Source(Base):
                     # self.request(LoadAllSymbolsInFileRequest(req.symbol.location.filename))
                     return True
 
-        elif isinstance(req, LoadAllSymbolsInFileRequest):
-            raise Exception("Not implemented")
+        elif isinstance(req, LoadSubGraphFileRequest):
+            return True
 
 
 
