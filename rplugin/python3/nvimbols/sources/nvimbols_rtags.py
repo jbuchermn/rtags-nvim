@@ -12,7 +12,8 @@ from nvimbols.request import (LoadSymbolRequest,
 from rtags.rc import (rc_get_referenced_symbol_location,
                       rc_get_symbol_info,
                       rc_get_referenced_by_symbol_locations,
-                      rc_get_class_hierarchy)
+                      rc_get_class_hierarchy,
+                      rc_symbol_locations_in_file)
 
 
 def get_location(data):
@@ -32,6 +33,7 @@ class RTagsSymbol(Symbol):
         self.name = data['symbolName']
         self.kind = data['kind']
         self.type = data['type'] if 'type' in data else None
+        self.fulfill()
 
 
 class Source(Base):
@@ -98,6 +100,7 @@ class Source(Base):
                 if 'parent' in data:
                     location = get_location(data['parent'])
                     parent = req.graph.symbol(location, RTagsSymbol)
+                    parent.set(data['parent'])
                     symbol.reference_to(ParentReference(), parent)
                     symbol.fulfill_source_of(ParentReference, LoadableState.FULL)
 
@@ -126,9 +129,11 @@ class Source(Base):
 
                 elif req.reference_class == ParentReference:
                     data = rc_get_symbol_info(req.symbol.location)
+
                     if 'parent' in data:
                         location = get_location(data['parent'])
                         parent = req.graph.symbol(location, RTagsSymbol)
+                        parent.set(data['parent'])
                         req.symbol.reference_to(ParentReference(), parent)
                     req.symbol.fulfill_source_of(ParentReference,
                                                  LoadableState.FULL)
@@ -156,14 +161,22 @@ class Source(Base):
 
                 elif req.reference_class == ParentReference:
                     """
-                    Request all symbols in the file, these will set parents, so all children are known
-
-                    TODO: Children of all symbols in the file are known.
+                    TODO!
                     """
-                    # self.request(LoadAllSymbolsInFileRequest(req.symbol.location.filename))
                     return True
 
         elif isinstance(req, LoadSubGraphFileRequest):
+            locations = rc_symbol_locations_in_file(req.sub_graph.filename)
+            for l in locations:
+                loc = Location(*l)
+                """
+                TODO! Some symbols don't have symbol_information, like 1:1:1:2
+                """
+                if loc.start_line == loc.start_col == loc.end_line == loc.end_col - 1 == 1:
+                    continue
+
+                req.graph.symbol(loc, RTagsSymbol)
+
             return True
 
 

@@ -195,6 +195,30 @@ def rc_get_referenced_by_symbol_locations(location, preview=False):
     return result, full
 
 
+def rc_symbol_locations_in_file(filename):
+    command = "rc --absolute-path --find-symbols --path-filter %s" % filename
+    p = Popen(command.split(" "), stdout=PIPE, stdin=PIPE, stderr=PIPE)
+    stdout_data, stderr_data = p.communicate()
+    stdout_data = stdout_data.decode("utf-8")
+    if(stdout_data == ""):
+        return None, False
+
+    result = []
+    for line in stdout_data.splitlines():
+        if line.strip() == "":
+                continue
+
+        location = line.split(' ')[0]
+        tmp = location.split(':')
+        filename = tmp[0]
+        line = int(tmp[1])
+        col = int(tmp[2])
+
+        result += [(filename, line, col)]
+
+    return result
+
+
 def rc_get_autocompletions(filename, line, col, text):
     command = "rc --json --absolute-path --synchronous-completions --code-complete-no-wait --code-complete-at %s:%i:%i --unsaved-file=%s:%i" % (filename, line, col, filename, len(text))
 
