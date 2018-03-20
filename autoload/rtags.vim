@@ -21,19 +21,6 @@ endfunction
 " On Auto-Commands {{{
 function! rtags#bufenter() abort
     let enabled = rtags#is_enabled()
-    
-    if(enabled && g:rtags_enable_autoreindex)
-        augroup rtags_nvim_autoreindex_group
-            autocmd!
-            autocmd InsertLeave * :call rtags#reindex()
-            autocmd TextChanged * :call rtags#reindex()
-        augroup end
-    else
-        augroup rtags_nvim_autoreindex_group
-            autocmd!
-        augroup end
-    endif
-
     call _rtags_enable(enabled)
 endfunction
 
@@ -44,23 +31,6 @@ endfunction
 
 " Status Change callbacks {{{
 function! rtags#on_status_change(in_index, indexing) abort
-
-    " TODO: This functionality should be moved to NVimbols
-    " This method is actually called more often, than just when the status chenges
-    " to ensure up-to-date Airline. However, we don't want to issue Neomake
-    " and NVimbolsClear unless the status actually changes from indexing to
-    " not indexing
-    if(!exists("s:LastIndexing"))
-        let s:LastIndexing = a:indexing
-    endif
-
-    if(s:LastIndexing && !a:indexing)
-        if(exists(":NVimbolsClear") && !a:indexing)
-            :NVimbolsClear
-        endif
-    endif
-    let s:LastIndexing = a:indexing
-
     if(exists(":AirlineRefresh"))
         let status = ""
         if(a:in_index && !a:indexing)

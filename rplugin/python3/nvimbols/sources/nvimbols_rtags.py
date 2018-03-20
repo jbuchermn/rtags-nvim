@@ -9,7 +9,9 @@ from nvimbols.reference import (ParentReference,
 from nvimbols.request import (LoadSymbolRequest,
                               LoadReferencesRequest,
                               LoadSubGraphFileRequest)
-from rtags.rc import (rc_get_referenced_symbol_location,
+from rtags.rc import (rc_reindex,
+                      rc_is_indexing,
+                      rc_get_referenced_symbol_location,
                       rc_get_symbol_info,
                       rc_get_referenced_by_symbol_locations,
                       rc_get_class_hierarchy,
@@ -86,6 +88,9 @@ class Source(Base):
         return res, full
 
     def request(self, req):
+        if rc_is_indexing():
+            return
+
         if isinstance(req, LoadSymbolRequest):
             data = rc_get_symbol_info(req.location)
 
@@ -179,5 +184,5 @@ class Source(Base):
 
             return True
 
-
-
+    def on_file_invalidate(self, filename, text):
+        rc_reindex(filename, text)
