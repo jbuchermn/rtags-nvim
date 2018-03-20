@@ -109,7 +109,7 @@ class Source(Base):
         elif isinstance(req, LoadReferencesRequest):
             if req.source_of:
                 if req.reference_class == TargetReference:
-                    res, full = self._find_references(req.symbol.location, req.state < LoadableState.FULL)
+                    res, full = self._find_references(req.symbol.location, req.requested_state < LoadableState.FULL)
                     for loc in res:
                         symbol = req.graph.symbol(loc, RTagsSymbol)
                         req.symbol.reference_to(TargetReference(), symbol)
@@ -141,7 +141,7 @@ class Source(Base):
 
             else:
                 if req.reference_class == TargetReference:
-                    res, full = self._find_referenced_by(req.symbol.location, req.state < LoadableState.FULL)
+                    res, full = self._find_referenced_by(req.symbol.location, req.requested_state < LoadableState.FULL)
                     for loc in res:
                         symbol = req.graph.symbol(loc, RTagsSymbol)
                         req.symbol.reference_from(TargetReference(), symbol)
